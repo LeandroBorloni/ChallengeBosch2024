@@ -32,16 +32,24 @@ while True:
                     y = int(prediction.y)
                     width = int(prediction.width)
                     height = int(prediction.height)
+
+                    x1 = int(x - width / 2)
+                    y1 = int(y - height / 2)
+                    x2 = int(x + width / 2)
+                    y2 = int(y + height / 2)
+
                     confidence = prediction.confidence
                     class_name = prediction.class_name
 
                     # Desenhando a caixa delimitadora na imagem
-                    top_left = (x, y)
-                    bottom_right = (x + width, y + height)
+
+                    # top_left = (x, y)
+                    # bottom_right = (x + width, y + height)
+
                     color = (0, 255, 0)  # Verde para a caixa delimitadora
                     thickness = 2  # Espessura da linha da caixa
 
-                    cv2.rectangle(frame, top_left, bottom_right, color, thickness)
+                    cv2.rectangle(frame, (x1,y1), (x2,y2), color, thickness)
 
                     # Adicionando o texto com a classe e confiança
                     label = f"{class_name} ({confidence:.2f})"
