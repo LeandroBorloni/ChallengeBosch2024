@@ -1,3 +1,4 @@
 # ChallengeBosch2024
 
-pip install inference
+pip install inference <br>
+pip install pyttsx3
