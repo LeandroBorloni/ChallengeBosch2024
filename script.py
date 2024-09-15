@@ -60,7 +60,7 @@ def is_object_in_view(current_bbox, previous_bbox):
     return intersection_area > required_intersection_area
 
 # Carregar o modelo
-model = inference.get_model("1-modelo/2")
+model = inference.get_model("1-modelo/3")
 
 # Iniciar a captura de vídeo
 cap = cv2.VideoCapture(0)
@@ -120,12 +120,12 @@ while True:
     for class_name, bbox in current_objects.items():
         if class_name not in object_visibility:
             # O objeto é novo, fale sobre ele
-            speak_thread(f"Objeto detectado: {class_name}")
+            speak_thread(f"{class_name}")
         else:
             # O objeto já estava visível anteriormente, verifique se voltou
             if not is_object_in_view(bbox, object_visibility[class_name]):
                 # O objeto saiu e voltou para o campo de visão, fale sobre ele
-                speak_thread(f"Objeto detectado: {class_name}")
+                speak_thread(f"{class_name}")
 
     # Atualizar a visibilidade dos objetos
     object_visibility = current_objects
