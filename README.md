@@ -5,6 +5,7 @@ pip install opencv-python <br>
 pip install gtts <br>
 pip install SpeechRecognition <br>
 pip install pygame <br>
+pip install spacy <br>
 
 Para captura do microfone para reconhecimento de voz: <br>
 Em Windows <br>
