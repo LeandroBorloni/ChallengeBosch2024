@@ -11,6 +11,25 @@ import pygame # Usar para feedback auditivo (Windows)
 import uuid  # Para gerar nomes de arquivos únicos
 import spacy  # Biblioteca para NLP (instalar com pip install spacy)
 
+# Lista de preços dos produtos
+precos_produtos = {
+    'agua-garrafa': 2.50,
+    'caixa-sucrilhos': 12.00,
+    'coca-garrafa': 7.50,
+    'coca-lata': 4.50,
+    'coca-zero-garrafa': 7.50,
+    'coca-zero-lata': 4.50,
+    'doritos': 10.00,
+    'fanta-laranja-garrafa': 6.90,
+    'fanta-laranja-lata': 3.20,
+    'guarana-garrafa': 6.70,
+    'guarana-lata': 3.20,
+    'guarana-zero-garrafa': 6.70,
+    'guarana-zero-lata': 3.20,
+    'heineken': 9.50,
+    'saco-arroz': 25.00
+}
+
 # Carrega o modelo de linguagem português do spaCy
 nlp = spacy.load("pt_core_news_sm")
 
@@ -119,25 +138,25 @@ def interpret_command(text):
     doc = nlp(text)
     intent = None
     item = None
-    
 
     # Simples análise de intenção com variações mais flexíveis
-    if "gravar" in text or "criar" in text and "lista" in text:
-        intent = "gravar_lista"
-    elif "confirmar" in text:
-        intent = "confirmar_item"
-    elif "apagar" in text and "lista" in text:
+    if "adicionar" in text:
+        intent = "adicionar_item"
+    elif "remover" in text:
+        intent = "remover_item"
+    elif any(word in text for word in ["apagar", "limpar", "deletar", "esvaziar"]) and "lista" in text:
         intent = "apagar_lista"
-    elif "ver" in text and "lista" in text:
+    elif any(word in text for word in ["ver", "mostrar", "listar", "exibir", "revisar"]) and "lista" in text:
         intent = "ver_lista"
-    elif "detectar" in text or "detecção" in text and "objetos" in text:
+    elif any(word in text for word in ["detectar", "identificar", "localizar", "encontrar", "reconhecer"]) and "objetos" in text:
         intent = "detectar_objetos"
-    elif "parar" in text or "finalizar" in text:
+    elif any(word in text for word in ["parar", "interromper", "cessar", "desativar", "finalizar"]):
         if "detecção" in text or "objetos" in text:
             intent = "parar_detecção"
-        elif "lista" in text:
-            intent = "parar_lista"
     
+    else:
+        intent = None  
+
     # Extração de entidades (nomes de produtos)
     for token in doc:
         if token.text.lower() in produtos:  # Exemplo de como pegar um item (adapte conforme suas necessidades)
@@ -146,64 +165,22 @@ def interpret_command(text):
 
     return intent, item
 
-# Função para adicionar itens à lista de compras
-def add_to_shopping_list():
-    speak_thread_voice("Comece a dizer os itens da lista de compras.")
-    temp_list = []  # Lista temporária para gravar os itens
-    while True:
-        command = recognize_voice()
-        if command:
-            intent, _ = interpret_command(command)
-            if intent == "parar_lista":
-                if temp_list:
-                    # Fala todos os itens adicionados
-                    items = ", ".join(temp_list)
-                    speak_thread_voice(f"Sua lista atual contém os seguintes itens: {items}.")
-                    
-                    # Pergunta se deseja alterar algum item
-                    speak_thread_voice("Deseja alterar algum item?")
-                    time.sleep(2)
-                    response = recognize_voice()
+# Função para gerenciar a lista de compras
+def add_to_list(item):
+    shopping_list.append(item)
+    speak_thread_voice(f"{item} adicionado à lista de compras.")
 
-                    if response and "sim" in response:
-                        speak_thread_voice("Regravando a lista de compras. Comece a dizer os itens novamente.")
-                        add_to_shopping_list()  # Recomeça o processo de gravação da lista
-                    else:
-                        # Se a resposta for não, grava os itens na lista definitiva
-                        shopping_list.extend(temp_list)
-                        speak_thread_voice("Lista de compras gravada.")
-                else:
-                    speak_thread_voice("Nenhum item foi adicionado à lista.")
-                break
-            else:
-                # Adiciona o item à lista temporária
-                temp_list.append(command)
-
-# Função para confirmar itens
-def confirm_item(item):
-    print(item)
-    print(shopping_list)
+def remove_from_list(item):
     if item in shopping_list:
-        print(f'Entrou no if: {item}')
-        checked_items.append(item)
         shopping_list.remove(item)
-        speak_thread_voice(f"{item} confirmado.")
+        speak_thread_voice(f"{item} removido da lista de compras.")
     else:
         speak_thread_voice(f"{item} não está na lista.")
 
 # Função para apagar a lista de compras
 def clear_list():
     shopping_list.clear()
-    checked_items.clear()
     speak_thread_voice("Lista de compras apagada.")
-
-# Função para listar os itens restantes
-def list_remaining_items():
-    if shopping_list:
-        remaining_items = ", ".join(shopping_list)
-        speak_thread_voice(f"Faltam os seguintes itens: {remaining_items}.")
-    else:
-        speak_thread_voice("Todos os itens foram confirmados.")
 
 # Função para listar a lista de compras atual
 def speak_shopping_list():
@@ -223,12 +200,7 @@ def process_voice_commands():
         if command_text:
             intent, item = interpret_command(command_text)
             
-            if intent == "gravar_lista":
-                add_to_shopping_list()
-            elif intent == "confirmar_item" and item:
-                confirm_item(item)
-                list_remaining_items()
-            elif intent == "apagar_lista":
+            if intent == "apagar_lista":
                 clear_list()
             elif intent == "ver_lista":
                 speak_shopping_list()
@@ -238,14 +210,39 @@ def process_voice_commands():
             elif intent == "parar_detecção":
                 detecting_objects = False
                 speak_thread_voice("Detecção finalizada.")
-            else:
-                speak_thread_voice("Desculpe, não entendi o que você disse.")
+            # elif intent == "adicionar_item" and item:
+            #     add_to_list(item)
+            # elif intent == "remover_item" and item:
+            #     remove_from_list(item)
+            # elif intent:
+            #     speak_thread_voice("Desculpe, não entendi o que você disse.")
 
+# Função para verificar e responder à detecção de objetos
+def handle_object_detected(class_name):
+    preco = precos_produtos.get(class_name, "preço não disponível")
+    speak_thread_detection(f"{class_name}, {preco} reais. Deseja adicionar ou remover da lista?")
+    time.sleep(5)
+
+    command_text = recognize_voice()
+    
+    if command_text:
+        intent, item = interpret_command(command_text)
+        if intent == "adicionar_item":
+            add_to_list(class_name)
+        elif intent == "remover_item":
+            remove_from_list(class_name)
+        else:
+            speak_thread_voice("Não entendi sua intenção. Continuando a detecção.")
+    else:
+        speak_thread_voice("Continuando a detecção.")
+    
+    time.sleep(3)
 
 # Funções de gerenciamento de lista de compras
 shopping_list = []
-checked_items = []
-produtos = ['coca-cola', 'coca-cola zero', 'guarana', 'guarana zero', 'arroz', 'fanta laranja', 'feijao', 'agua']
+produtos = ['agua-garrafa', 'caixa-sucrilhos', 'coca-garrafa','coca-lata', 'coca-zero-garrafa', 'coca-zero-lata', 
+            'doritos', 'fanta-laranja-garrafa', 'fanta-laranja-lata', 'guarana-garrafa', 'guarana-lata', 'guarana-zero-garrafa', 
+            'guarana-zero-lata', 'heineken', 'saco-arroz']
 
 # Configuração inicial
 detecting_objects = False
@@ -267,7 +264,7 @@ voice_thread = threading.Thread(target=process_voice_commands, daemon=True)
 voice_thread.start()
 
 # Carregar o modelo
-model = inference.get_model("1-modelo/3")
+model = inference.get_model("1-modelo/4")
 
 # Iniciar a captura de vídeo
 cap = cv2.VideoCapture(0)
@@ -276,7 +273,7 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 500)
 # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'YUYV'))
 
 if not cap.isOpened():
-    print("Erro ao abrir a câmera.")
+    speak_thread_voice("Erro ao abrir a câmera.")
     exit()
             
 # Dicionário para armazenar a visibilidade dos objetos
@@ -291,7 +288,7 @@ while is_program_running:
         ret, frame = cap.read()
         
         if not ret:
-            print("Não foi possível capturar a imagem.")
+            speak_thread_voice("Não foi possível capturar a imagem.")
             break
         
         frame_count += 1
@@ -306,43 +303,39 @@ while is_program_running:
                 for response in result:
                     if response and response.predictions:
                         for prediction in response.predictions:
-                            # Extraindo informações das previsões
-                            x = int(prediction.x)
-                            y = int(prediction.y)
-                            width = int(prediction.width)
-                            height = int(prediction.height)
+                            if prediction.confidence >= 0.5:
+                                # Extraindo informações das previsões
+                                x = int(prediction.x)
+                                y = int(prediction.y)
+                                width = int(prediction.width)
+                                height = int(prediction.height)
 
-                            x1 = int(x - width / 2)
-                            y1 = int(y - height / 2)
-                            x2 = int(x + width / 2)
-                            y2 = int(y + height / 2)
+                                x1 = int(x - width / 2)
+                                y1 = int(y - height / 2)
+                                x2 = int(x + width / 2)
+                                y2 = int(y + height / 2)
 
-                            confidence = prediction.confidence
-                            class_name = prediction.class_name
+                                confidence = prediction.confidence
+                                class_name = prediction.class_name
 
-                            # Adicionar o objeto detectado ao dicionário atual
-                            current_objects[class_name] = (x1, y1, x2, y2)
+                                # Adicionar o objeto detectado ao dicionário atual
+                                current_objects[class_name] = (x1, y1, x2, y2)
 
-                            # Desenhando a caixa delimitadora na imagem
-                            color = (0, 255, 0)  # Verde para a caixa delimitadora
-                            thickness = 2  # Espessura da linha da caixa
+                                # Desenhando a caixa delimitadora na imagem
+                                color = (0, 255, 0)  # Verde para a caixa delimitadora
+                                thickness = 2  # Espessura da linha da caixa
 
-                            cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
+                                cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
 
-                            # Adicionando o texto com a classe e confiança
-                            label = f"{class_name} ({confidence:.2f})"
-                            cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                                # Adicionando o texto com a classe e confiança
+                                label = f"{class_name} ({confidence:.2f})"
+                                cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-            # Verificar e falar sobre novos objetos ou objetos que retornaram
-            for class_name, bbox in current_objects.items():
-                if class_name not in object_visibility:
-                    # O objeto é novo, fale sobre ele
-                    speak_thread_detection(f"{class_name}. ")
-                else:
-                    # O objeto já estava visível anteriormente, verifique se voltou
-                    if not is_object_in_view(bbox, object_visibility[class_name]):
-                        # O objeto saiu e voltou para o campo de visão, fale sobre ele
-                        speak_thread_detection(f"{class_name}. ")
+                                # Verificar e falar sobre novos objetos ou objetos que retornaram
+                                for class_name, bbox in current_objects.items():
+                                    if class_name not in object_visibility:
+                                        # O objeto é novo, fale sobre ele
+                                        handle_object_detected(class_name)
 
             # Atualizar a visibilidade dos objetos
             object_visibility = current_objects
