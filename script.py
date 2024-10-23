@@ -73,7 +73,7 @@ def speech_worker_voice():
     while True:
         text = voice_speak_queue.get()
         if text is None:  # Exiting condition
-            break
+            continue
         speak_gtts(text, "voice")
         voice_speak_queue.task_done()
 
@@ -81,7 +81,7 @@ def speech_worker_detection():
     while True:
         text = detection_speak_queue.get()
         if text is None:  # Exiting condition
-            break
+            continue
         speak_gtts(text, "detection")
         detection_speak_queue.task_done()
 
@@ -140,11 +140,11 @@ def interpret_command(text):
     item = None
 
     # Simples análise de intenção com variações mais flexíveis
-    if "adicionar" in text:
+    if any(word in text for word in ["adicionar", "incluir", "acrescentar", "inserir"]):
         intent = "adicionar_item"
-    elif "remover" in text:
+    elif any(word in text for word in ["remover", "retirar", "excluir", "descartar"]):
         intent = "remover_item"
-    elif any(word in text for word in ["apagar", "limpar", "deletar", "esvaziar"]) and "lista" in text:
+    elif any(word in text for word in ["apagar", "limpar", "deletar", "esvaziar", "excluir"]) and "lista" in text:
         intent = "apagar_lista"
     elif any(word in text for word in ["ver", "mostrar", "listar", "exibir", "revisar"]) and "lista" in text:
         intent = "ver_lista"
@@ -186,7 +186,8 @@ def clear_list():
 def speak_shopping_list():
     if shopping_list:
         items = ", ".join(shopping_list)
-        speak_thread_voice(f"A lista de compras atual contém: {items}.")
+        total = sum(precos_produtos.get(item, 0) for item in shopping_list)  # Soma dos preços
+        speak_thread_voice(f"A lista de compras atual contém: {items}. E o valor total da lista é {total:.2f} reais.")
     else:
         speak_thread_voice("A lista de compras está vazia.")
 
@@ -289,7 +290,7 @@ while is_program_running:
         
         if not ret:
             speak_thread_voice("Não foi possível capturar a imagem.")
-            break
+            continue
         
         frame_count += 1
         
